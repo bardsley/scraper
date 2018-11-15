@@ -49,8 +49,8 @@ end
 
 # URLS to search
 # "https://www.warwicksu.com/"
-union_urls = ["https://www.thesubath.com","https://www.worcsu.com","https://www.chestersu.com/","https://keelesu.com","https://uwsu.com"]
-union_urls = ["https://keelesu.com","https://uwsu.com"]
+union_urls = %w( https://www.thesubath.com https://www.worcsu.com https://www.chestersu.com https://keelesu.com https://uwsu.com )
+union_urls = %w( https://keelesu.com https://uwsu.com )
 union_urls.each do |union_url|
   @union_url = union_url
   events = []
@@ -65,7 +65,7 @@ union_urls.each do |union_url|
   # Clear any javascript Links
   potential_event_listing_page_links.delete_if { |link| /javascript/.match(link.href) }
 
-  potential_event_listing_page_links.uniq! { |link| link.href }
+  potential_event_listing_page_links.uniq!(&:href)
   puts "#{potential_event_listing_page_links.size} potential event listing pages"
   puts "------------------------------------"
   potential_event_listing_page_links.each_with_index { |link,i| puts "#{i}) #{link.text.strip}: #{link.href}"  }
@@ -80,8 +80,8 @@ union_urls.each do |union_url|
 
     if event_page_links.size > 0
       puts "#{i}) #{event_page_links.size} events found @ #{event_list_page.title.strip} - (#{event_list_page.uri})"
-      event_pages = event_page_links.map {|page_link| get_event_page(page_link)}.compact
-      events += event_pages.map {|page| get_hash_of_event_from_page(page) }
+      event_pages = event_page_links.map(&method(:get_event_page)).compact
+      events += event_pages.map(&method(:get_hash_of_event_from_page))
     end
   end
 
@@ -94,8 +94,8 @@ union_urls.each do |union_url|
   @events[union_url] = events
 end
 
-puts ""
-puts "========================================"
-puts "              OUTPUT .json file"
-puts "========================================"
+puts ''
+puts '========================================'
+puts '              OUTPUT .json file'
+puts '========================================'
 puts @events.to_json
