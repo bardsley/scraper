@@ -1,17 +1,17 @@
 require 'rubygems'
 require 'bundler'
 require 'mechanize'
-require 'uri'
 
 $stdout.sync = true
 
-
+# takes a potential page link and fetches it
 def get_event_page(event_page_link)
   link_path = event_page_link.css("a.msl_event_name").first['href']
   link_path = @union_url + link_path unless /\/\//.match link_path
   @agent.get(link_path)
 end
 
+# returns an event hash from a Mechanize page of an event paage
 def get_hash_of_event_from_page(page)
   id = page.uri.path.split('/').last
   url = page.uri.to_s
@@ -38,14 +38,16 @@ def get_hash_of_event_from_page(page)
   {id: id, url: url, title: title, date_time: date_time,location: location, description: description}
 end
 
+# Setup Mechanize
 @agent = Mechanize.new { |agent|
   agent.user_agent_alias = 'Mac Safari'
   agent.agent.http.verify_mode = OpenSSL::SSL::VERIFY_NONE
 }
 
 
+# URLS to search
 # "https://www.warwicksu.com/"
-union_urls = ["https://www.chestersu.com/","https://keelesu.com","https://uwsu.com"]
+union_urls = ["https://www.thesubath.com","https://www.worcsu.com","https://www.chestersu.com/","https://keelesu.com","https://uwsu.com"]
 union_urls.each do |union_url|
   @union_url = union_url
   @events = []
@@ -70,6 +72,7 @@ union_urls.each do |union_url|
   puts "---------------------------------------"
   potential_event_listing_page_links.each_with_index do |link,i|
     event_list_page = link.click
+    next if event_list_page.class !=  Mechanize::Page # Usually a PDF linked in sitemap
     event_page_links = event_list_page.search(".event_item")
 
     if event_page_links.size > 0
