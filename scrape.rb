@@ -1,6 +1,7 @@
 require 'rubygems'
 require 'bundler'
 require 'mechanize'
+require 'json'
 
 $stdout.sync = true
 
@@ -44,13 +45,15 @@ end
   agent.agent.http.verify_mode = OpenSSL::SSL::VERIFY_NONE
 }
 
+@events = {}
 
 # URLS to search
 # "https://www.warwicksu.com/"
 union_urls = ["https://www.thesubath.com","https://www.worcsu.com","https://www.chestersu.com/","https://keelesu.com","https://uwsu.com"]
+union_urls = ["https://keelesu.com","https://uwsu.com"]
 union_urls.each do |union_url|
   @union_url = union_url
-  @events = []
+  events = []
   homepage = @agent.get(@union_url + "/sitemap")
   puts ""
   puts "Looking at #{union_url}"
@@ -78,17 +81,21 @@ union_urls.each do |union_url|
     if event_page_links.size > 0
       puts "#{i}) #{event_page_links.size} events found @ #{event_list_page.title.strip} - (#{event_list_page.uri})"
       event_pages = event_page_links.map {|page_link| get_event_page(page_link)}.compact
-      @events += event_pages.map {|page| get_hash_of_event_from_page(page) }
+      events += event_pages.map {|page| get_hash_of_event_from_page(page) }
     end
   end
 
-  events_found_count = @events.size
-  @events.uniq! { |evt| evt[:id] }
+  events_found_count = events.size
+  events.uniq! { |evt| evt[:id] }
   puts "------------------------------------------------------------------"
-  puts "Results #{@events.size} found (removed #{events_found_count - @events.size} duplicates)"
-  # print "-------"
-  # puts @events.to_yaml
-  puts "------------------------------------------------------------------"
+  puts "Results #{events.size} found (removed #{events_found_count - events.size} duplicates)"
 
+  puts "------------------------------------------------------------------"
+  @events[union_url] = events
 end
 
+puts ""
+puts "========================================"
+puts "              OUTPUT .json file"
+puts "========================================"
+puts @events.to_json
