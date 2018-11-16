@@ -17,11 +17,17 @@ def get_hash_of_group_from_page(page)
   id = page.uri.path.split('/').last
   url = page.uri.to_s
   title = page.title.strip
+  path_array = page.uri.path.split('/')
+  path_array.pop  # remove name/id of specific gropu
+  grouping_type = path_array.pop
+  parent_organisation = path_array.pop
 
   description_elms = page.search("//*[text()='JOIN US']").first.parent.css('.mslwidget')
   description = description_elms.text.gsub("Description",'').strip unless description_elms.nil?
 
-  {id: id, url: url, title: title, description: description}
+  { grouping_id: id, url: url,
+    grouping_type: grouping_type, parent_organisation: parent_organisation,
+    title: title, description: description}
 end
 
 # Setup Mechanize
@@ -79,7 +85,7 @@ union_urls.each do |union_url|
   end
 
   groups_found_count = groups.size
-  groups.uniq! { |evt| evt[:id] }
+  groups.uniq! { |group| group[:grouping_id] }
   puts "------------------------------------------------------------------"
   puts "Results #{groups.size} found (removed #{groups_found_count - groups.size} duplicates)"
 
