@@ -7,7 +7,7 @@ $stdout.sync = true
 
 # takes a potential page link and fetches it
 def get_group_page(group_page_link)
-  link_path = group_page_link.css("a.msl_group_name").first['href']
+  link_path = group_page_link.css("a.msl-gl-link").first['href']
   link_path = @union_url + link_path unless /\/\//.match link_path
   @agent.get(link_path)
 end
@@ -50,17 +50,25 @@ end
 # URLS to search
 # "https://www.warwicksu.com/"
 union_urls = %w( https://www.thesubath.com https://www.worcsu.com https://www.chestersu.com https://keelesu.com https://uwsu.com )
-union_urls = %w( https://keelesu.com https://uwsu.com )
+union_urls = %w( https://chestersu.com )
 union_urls.each do |union_url|
   @union_url = union_url
   groups = []
-  homepage = @agent.get(@union_url + "/sitemap")
+  sitemap = @agent.get(@union_url + "/sitemap")
   puts ""
   puts "Looking at #{union_url}"
   puts "="*50
   puts ""
-  potential_group_listing_page_links = homepage.links_with(href: /group/)
-  potential_group_listing_page_links += homepage.links_with(text: /group/i)
+
+  potential_group_listing_page_links = []
+  href_options = %w(activities groups clubs societies society group au sports)
+  href_options.each do |pattern|
+    potential_group_listing_page_links += sitemap.links_with(href: /#{pattern}/)
+  end
+  name_options = %w(activities groups clubs societies society group au sports)
+  name_options.each do |pattern|
+    potential_group_listing_page_links += sitemap.links_with(text: /#{pattern}/i)
+  end
 
   # Clear any javascript Links
   potential_group_listing_page_links.delete_if { |link| /javascript/.match(link.href) }
@@ -76,7 +84,7 @@ union_urls.each do |union_url|
   potential_group_listing_page_links.each_with_index do |link,i|
     group_list_page = link.click
     next if group_list_page.class !=  Mechanize::Page # Usually a PDF linked in sitemap
-    group_page_links = group_list_page.search(".group_item")
+    group_page_links = group_list_page.search(".group-list [data-msl-grouping-id]")
 
     if group_page_links.size > 0
       puts "#{i}) #{group_page_links.size} groups found @ #{group_list_page.title.strip} - (#{group_list_page.uri})"
