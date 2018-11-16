@@ -18,25 +18,10 @@ def get_hash_of_group_from_page(page)
   url = page.uri.to_s
   title = page.title.strip
 
-  time_elm = page.css("#msl_group .time").first
-  date_elm = page.css("#msl_group .date").first
-  if time_elm.nil? && date_elm.nil?
-    datetime_elm = page.css("#msl_group .group-details p")[0]
-    date_time = datetime_elm.text unless datetime_elm.nil?
-  else
-    date = date_elm.text unless date_elm.nil?
-    time = time_elm.text unless time_elm.nil?
-    date_time = "#{date} #{time}"
-  end
-
-  location_elm = page.css("#msl_group .location").first
-  location_elm = page.css("#msl_group .group-details p")[1] if location_elm.nil?
-  location = location_elm.text unless location_elm.nil?
-
-  description_elms = page.css("#msl_group .desc").first
+  description_elms = page.search("//*[text()='JOIN US']").first.parent.css('.mslwidget')
   description = description_elms.text.gsub("Description",'').strip unless description_elms.nil?
 
-  {id: id, url: url, title: title, date_time: date_time,location: location, description: description}
+  {id: id, url: url, title: title, description: description}
 end
 
 # Setup Mechanize
@@ -49,7 +34,7 @@ end
 
 # URLS to search
 # "https://www.warwicksu.com/"
-union_urls = %w( https://www.thesubath.com https://www.worcsu.com https://www.chestersu.com https://keelesu.com https://uwsu.com )
+# union_urls = %w( https://www.thesubath.com https://www.worcsu.com https://www.chestersu.com https://keelesu.com https://uwsu.com )
 union_urls = %w( https://chestersu.com )
 union_urls.each do |union_url|
   @union_url = union_url
@@ -106,4 +91,4 @@ puts ''
 puts '========================================'
 puts '              OUTPUT .json file'
 puts '========================================'
-puts @groups.to_json
+puts @groups.to_yaml
