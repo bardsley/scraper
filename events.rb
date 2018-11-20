@@ -20,20 +20,37 @@ def get_hash_of_event_from_page(page)
 
   time_elm = page.css("#msl_event .time").first
   date_elm = page.css("#msl_event .date").first
-  if time_elm.nil? && date_elm.nil?
-    datetime_elm = page.css("#msl_event .event-details p")[0]
-    date_time = datetime_elm.text unless datetime_elm.nil?
-  else
+  if date_elm || time_elm # We have explicit date and time
     date = date_elm.text unless date_elm.nil?
     time = time_elm.text unless time_elm.nil?
     date_time = "#{date} #{time}"
+  elsif page.css("#msl_event .event-details p").size > 0 # specifically marked event details
+    datetime_elm = page.css("#msl_event .event-details p")[0]
+    date_time = datetime_elm.text unless datetime_elm.nil?
+  elsif page.css("#msl_event").size > 0 # There are some events we think
+    datetime_elm = page.css("#msl_event").search("h2","h3","h4")
+    begin
+      date_time = datetime_elm.text.split("\n").last.strip unless datetime_elm.nil?
+    rescue
+      date_time = datetime_elm.text.split("\n").class.to_s
+    end
   end
 
   location_elm = page.css("#msl_event .location").first
   location_elm = page.css("#msl_event .event-details p")[1] if location_elm.nil?
-  location = location_elm.text unless location_elm.nil?
+  location_elm = page.css("#msl_event").search("h2","h3","h4").first if location_elm.nil?
+  begin
+    location = location_elm.text.split("\n").first.strip unless location_elm.nil?
+  rescue
+    puts "Rescued for #{page.uri}"
+    puts location_elm.text unless location_elm.nil?
+  end
+  if location_elm.nil?
+    location = "NO Location Element"
+  end
 
   description_elms = page.css("#msl_event .desc").first
+  description_elms = page.css("#msl_event .eventdescription").first if description_elms.nil?
   description = description_elms.text.gsub("Description",'').strip unless description_elms.nil?
 
   {id: id, url: url, title: title, date_time: date_time,location: location, description: description}
@@ -49,12 +66,17 @@ end
 
 # URLS to search
 # "https://www.warwicksu.com/"
-union_urls = %w( https://www.thesubath.com https://www.worcsu.com https://www.chestersu.com https://keelesu.com https://uwsu.com )
-union_urls = %w( https://keelesu.com https://uwsu.com )
+union_urls = %w[https://www.rusu.co.uk/ https:///www.thesubath.com https://www.worcsu.com https://www.chestersu.com https://keelesu.com https://uwsu.com]
+union_urls = %w[https://www.keelesu.com/]
 union_urls.each do |union_url|
   @union_url = union_url
   events = []
-  homepage = @agent.get(@union_url + "/sitemap")
+  begin
+    homepage = @agent.get(@union_url + "/sitemap")
+  rescue
+    puts "Couldn't get sitemap for #{union_url}"
+    next
+  end
   puts ""
   puts "Looking at #{union_url}"
   puts "="*50
@@ -70,9 +92,9 @@ union_urls.each do |union_url|
   puts "------------------------------------"
   potential_event_listing_page_links.each_with_index { |link,i| puts "#{i}) #{link.text.strip}: #{link.href}"  }
 
-  puts ""
-  puts "Analysing potential event listing pages"
-  puts "---------------------------------------"
+  puts ''
+  puts 'Analysing potential event listing pages'
+  puts '---------------------------------------'
   potential_event_listing_page_links.each_with_index do |link,i|
     event_list_page = link.click
     next if event_list_page.class !=  Mechanize::Page # Usually a PDF linked in sitemap
@@ -98,4 +120,4 @@ puts ''
 puts '========================================'
 puts '              OUTPUT .json file'
 puts '========================================'
-puts @events.to_json
+puts @events.to_yaml
